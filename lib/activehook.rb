@@ -1,5 +1,5 @@
 require "activehook/version"
 
-module Activehook
+module ActiveHook
   # Your code goes here...
 end

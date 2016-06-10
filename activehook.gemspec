@@ -5,7 +5,7 @@ require 'activehook/version'
 
 Gem::Specification.new do |spec|
   spec.name          = "activehook"
-  spec.version       = Activehook::VERSION
+  spec.version       = ActiveHook::VERSION
   spec.authors       = ["Nicholas Sweeting"]
   spec.email         = ["nsweeting@gmail.com"]
 
