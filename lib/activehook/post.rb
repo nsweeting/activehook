@@ -1,4 +1,3 @@
-require 'curb'
 require 'net/http'
 require 'uri'
 
