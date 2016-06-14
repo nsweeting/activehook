@@ -17,16 +17,19 @@ module ActiveHook
   end
 
   class Config
-    DEFAULTS = { redis_url: ENV['REDIS_URL'],
-                 redis_pool: 5,
-                 threads_max: 10,
-                 retry_max: 3,
-                 retry_time: 3600,
-                 workers_queued: 3,
-                 worker_failed_timer: 300 }
+    DEFAULTS = {
+      redis_url: ENV['REDIS_URL'],
+      redis_pool: 5,
+      threads_max: 20,
+      threads_queue: 500,
+      retry_max: 3,
+      retry_time: 3600,
+      workers_queued: 3,
+      worker_failed_timer: 300
+    }.freeze
 
-    attr_accessor :redis_url, :redis_pool, :threads_max, :retry_max, :retry_time,
-                  :workers_queued, :worker_failed_timer
+    attr_accessor :redis_url, :redis_pool, :threads_max, :threads_queue,
+                  :retry_max, :retry_time, :workers_queued, :worker_failed_timer
 
     def initialize
       DEFAULTS.each { |key, value| send("#{key}=", value) }

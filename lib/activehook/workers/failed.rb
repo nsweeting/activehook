@@ -1,6 +1,10 @@
 module ActiveHook
   module Workers
     class Failed
+      def self.run
+        Workers::Failed.new
+      end
+
       def initialize
         ActiveHook.log.info('Failed hooks worker booted')
         perform
@@ -9,7 +13,7 @@ module ActiveHook
       private
 
       def perform
-        ActiveHook.thread do
+        Concurrent::Future.execute do
           loop do
             ActiveHook.redis.with do |conn|
               conn.lrange('ah:failed', 0, 1000).each do |json|

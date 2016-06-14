@@ -1,8 +1,10 @@
 require 'curb'
+require 'net/http'
+require 'uri'
 
 module ActiveHook
   class POST
-    USER_AGENT = "ActiveHook/#{ActiveHook::VERSION}"
+    USER_AGENT = "ActiveHook/#{ActiveHook::VERSION}".freeze
 
     attr_accessor :uri, :payload
     attr_reader :response_time
@@ -12,7 +14,6 @@ module ActiveHook
     end
 
     def perform
-      valid?
       http_post
       status_message
       status
@@ -25,12 +26,15 @@ module ActiveHook
     private
 
     def http_post
+      new_uri = URI.parse(uri)
+      http = Net::HTTP.new(new_uri.host, new_uri.port)
       measure_response_time do
-        @response = Curl::Easy.http_post(uri, payload.to_json) do |curl|
-          curl.headers['Accept'] = 'application/json'
-          curl.headers['Content-Type'] = 'application/json'
-          curl.headers['User-Agent'] = USER_AGENT
-        end
+        @response = http.post(new_uri.path, payload.to_json, {"Content-Type" => "application/json", "Accept" => "application/json"})
+        #@response = Curl::Easy.http_post(uri, payload.to_json) do |curl|
+          #curl.headers['Accept'] = 'application/json'
+          #curl.headers['Content-Type'] = 'application/json'
+          #curl.headers['User-Agent'] = USER_AGENT
+        #end
       end
     rescue
       @status = :error
@@ -44,7 +48,7 @@ module ActiveHook
     end
 
     def set_status
-      case @response.status.to_i
+      case @response.code.to_i
       when (200..204)
         :success
       when (400..499)
@@ -61,11 +65,6 @@ module ActiveHook
       else
         ActiveHook.log.err(msg)
       end
-    end
-
-    def valid?
-      raise Errors::HTTP, 'Payload must be a Hash.' unless payload.is_a?(Hash)
-      raise Errors::HTTP, 'URI is not a valid format.' unless uri =~ /\A#{URI::regexp}\z/
     end
   end
 end

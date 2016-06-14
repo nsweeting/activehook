@@ -13,7 +13,7 @@ module ActiveHook
         Concurrent::ThreadPoolExecutor.new(
           max_threads: ActiveHook.config.threads_max,
           min_threads: ActiveHook.config.threads_max,
-          max_queue: ActiveHook.config.threads_max * 5,
+          max_queue: ActiveHook.config.threads_queue,
           fallback_policy: :caller_runs)
       end
     end

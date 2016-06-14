@@ -3,7 +3,7 @@ module ActiveHook
     class Runner
       def initialize(json: nil)
         @json = json
-        @hook = Hook.new(JSON.parse(@json))
+        @hook = ActiveHook::Hook.new(JSON.parse(@json))
         perform
       end
     end
