@@ -3,4 +3,5 @@
 require 'activehook'
 require 'activehook/cli'
 
-ActiveHook::CLI.run(ARGV)
+cli = ActiveHook::CLI.new(ARGV)
+cli.run

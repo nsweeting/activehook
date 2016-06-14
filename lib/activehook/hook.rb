@@ -9,7 +9,12 @@ module ActiveHook
     def perform
       valid?
       ActiveHook.thread do
-        ActiveHook.redis.with { |redis| redis.add_hook(to_json) }
+        ActiveHook.redis.with do |conn|
+          conn.pipelined do
+            conn.lpush('ah:queued', to_json)
+            conn.incr('ah:total_created')
+          end
+        end
       end
     end
 

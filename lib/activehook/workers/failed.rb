@@ -2,6 +2,7 @@ module ActiveHook
   module Workers
     class Failed
       def initialize
+        ActiveHook.log.info('Failed hooks worker booted')
         perform
       end
 
@@ -10,8 +11,8 @@ module ActiveHook
       def perform
         ActiveHook.thread do
           loop do
-            ActiveHook.redis.with do |redis|
-              redis.failed_hooks.each do |json|
+            ActiveHook.redis.with do |conn|
+              conn.lrange('ah:failed', 0, 1000).each do |json|
                 ActiveHook.thread { FailedRunner.new(json: json) }
               end
             end
@@ -26,10 +27,13 @@ module ActiveHook
 
       def perform
         return unless failed? || retry?
-        ActiveHook.redis.with do |redis|
-          redis.remove_hook(@json)
-          retry_hook if retry? && !failed?
+        ActiveHook.redis.with do |conn|
+          conn.pipelined do
+            conn.lrem('ah:failed', 1, @json)
+            conn.incr('ah:total_failed') if failed?
+          end
         end
+        retry_hook if retry? && !failed?
       end
 
       def retry_hook

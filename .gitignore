@@ -1,5 +1,6 @@
 /.bundle/
 /.yardoc
+/.byebug_history
 /Gemfile.lock
 /_yardoc/
 /coverage/

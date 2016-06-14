@@ -4,6 +4,7 @@ module ActiveHook
   module Workers
     class Queued
       def initialize
+        ActiveHook.log.info('Queued hooks worker booted')
         perform
       end
 
@@ -12,7 +13,9 @@ module ActiveHook
       def perform
         ActiveHook.thread do
           loop do
-            json = ActiveHook.redis.with(&:await_queued_hook)
+            json = ActiveHook.redis.with do |conn|
+              conn.brpoplpush('ah:queued', 'ah:failed')
+            end
             ActiveHook.thread { QueuedRunner.new(json: json) }
           end
         end
@@ -24,8 +27,14 @@ module ActiveHook
 
       def perform
         post = ActiveHook::POST.new(uri: @hook.uri, payload: @hook.payload)
-        status = post.perform
-        ActiveHook.redis.with { |r| r.remove_hook(@json) } if status == :success
+        ActiveHook.redis.with do |conn|
+          conn.pipelined do
+            conn.incr('ah:total_processed')
+            break unless post.perform == :success
+            conn.lrem('ah:failed', 1, @json)
+            conn.incr('ah:total_success')
+          end
+        end
       end
     end
   end
