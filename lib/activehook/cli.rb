@@ -6,9 +6,9 @@ module ActiveHook
       setup_options(argv)
     end
 
-    def run
+    def start
       server = ActiveHook::Server.new
-      server.run
+      server.start
     end
 
     private

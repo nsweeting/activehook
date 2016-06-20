@@ -1,13 +1,19 @@
-require 'activehook/workers/runner'
-require 'activehook/workers/queued'
-require 'activehook/workers/failed'
+require 'activehook/workers/manager'
 
 module ActiveHook
   class Server
-    def run
-      Workers::Queued.run
-      Workers::Failed.run
+    def initialize
+      at_exit { shutdown }
+    end
+
+    def start
+      @manager = Workers::Manager.new(ActiveHook.config.worker_options)
+      @manager.start
       sleep
+    end
+
+    def shutdown
+      @manager.shutdown
     end
   end
 end

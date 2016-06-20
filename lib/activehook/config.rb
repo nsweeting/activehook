@@ -12,7 +12,6 @@ module ActiveHook
     def reset
       @config = nil
       @connection_pool = nil
-      @thread_pool = nil
     end
   end
 
@@ -20,16 +19,15 @@ module ActiveHook
     DEFAULTS = {
       redis_url: ENV['REDIS_URL'],
       redis_pool: 5,
-      threads_max: 20,
-      threads_queue: 500,
+      workers: 2,
+      queue_threads: 4,
+      retry_threads: 2,
       retry_max: 3,
       retry_time: 3600,
-      workers_queued: 3,
-      worker_failed_timer: 300
     }.freeze
 
-    attr_accessor :redis_url, :redis_pool, :threads_max, :threads_queue,
-                  :retry_max, :retry_time, :workers_queued, :worker_failed_timer
+    attr_accessor :redis_url, :redis_pool, :retry_max, :retry_time,
+                  :workers, :queue_threads, :retry_threads
 
     def initialize
       DEFAULTS.each { |key, value| send("#{key}=", value) }
@@ -37,6 +35,14 @@ module ActiveHook
 
     def retry_max_time
       @retry_max_time ||= retry_max * retry_time
+    end
+
+    def worker_options
+      {
+        worker_count: workers,
+        queue_threads: queue_threads,
+        retry_threads: retry_threads
+      }
     end
   end
 end

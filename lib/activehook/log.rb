@@ -1,3 +1,5 @@
+require 'logger'
+
 module ActiveHook
   class << self
     STDOUT.sync = true
@@ -9,7 +11,7 @@ module ActiveHook
 
   class Log
     def initialize
-      @log = Logger.new(STDOUT)
+      @log = ::Logger.new(STDOUT)
       @log.formatter = proc do |_severity, datetime, _progname, msg|
         "[ #{datetime} ] #{msg}\n"
       end
