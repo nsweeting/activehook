@@ -1,0 +1,7 @@
+#!/usr/bin/env ruby
+
+require 'activehook'
+require 'activehook/app/base'
+
+app = ActiveHook::App::Launcher.new(ARGV)
+app.start

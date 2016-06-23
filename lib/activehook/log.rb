@@ -13,7 +13,7 @@ module ActiveHook
     def initialize
       @log = ::Logger.new(STDOUT)
       @log.formatter = proc do |_severity, datetime, _progname, msg|
-        "[ #{datetime} ] #{msg}\n"
+        "#{msg}\n"
       end
     end
 

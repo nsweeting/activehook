@@ -1,14 +1,20 @@
-require 'activehook/workers/base'
-
 module ActiveHook
-  module Workers
-    class Retry < Base
+  module Server
+    class Retry
+      def initialize
+        @done = false
+      end
+
       def start
         until @done
           retries = retrieve_retries
           update(retries) unless retries.empty?
           sleep 2
         end
+      end
+
+      def shutdown
+        @done = true
       end
 
       private
@@ -33,12 +39,11 @@ module ActiveHook
     class RetryRunner
       def initialize(json)
         @json = json
-        @hook = ActiveHook::Hook.new(JSON.parse(@json))
+        @hook = Hook.new(JSON.parse(@json))
         start
       end
 
       def start
-        @hook.bump_retry
         @hook.perform
       end
     end

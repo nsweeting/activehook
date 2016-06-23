@@ -1,5 +1,3 @@
-require 'redis'
-
 module ActiveHook
   class << self
     attr_reader :connection_pool

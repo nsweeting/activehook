@@ -1,0 +1,17 @@
+ActiveHook.mode = :app
+
+require 'puma'
+require 'rack'
+require 'redis'
+require 'json'
+require 'connection_pool'
+require 'activehook/config'
+require 'activehook/log'
+require 'activehook/redis'
+require 'activehook/errors'
+require 'activehook/hook'
+require 'activehook/validate'
+require 'activehook/version'
+require 'activehook/app/config'
+require 'activehook/app/launcher'
+require 'activehook/app/middleware'

@@ -1,9 +1,8 @@
-require 'connection_pool'
-require 'json'
-require 'uri'
-require 'activehook/config'
-require 'activehook/errors'
-require 'activehook/hook'
-require 'activehook/log'
-require 'activehook/redis'
 require 'activehook/version'
+require 'byebug'
+
+module ActiveHook
+  class << self
+    attr_accessor :mode
+  end
+end

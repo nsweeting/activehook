@@ -6,7 +6,17 @@ module ActiveHook
     end
 
     def config
-      @config ||= Config.new
+      @config ||= build_config
+    end
+
+    def build_config
+      klass =
+        case ActiveHook.mode
+        when :server then ActiveHook::Server::Config
+        when :client then ActiveHook::Client::Config
+        else ActiveHook::App::Config
+        end
+      klass.new
     end
 
     def reset
@@ -15,33 +25,22 @@ module ActiveHook
     end
   end
 
-  class Config
-    DEFAULTS = {
+  class BaseConfig
+    BASE_DEFAULTS = {
       redis_url: ENV['REDIS_URL'],
-      redis_pool: 5,
-      workers: 2,
-      queue_threads: 4,
-      retry_threads: 2,
-      retry_max: 3,
-      retry_time: 3600,
+      redis_pool: 5
     }.freeze
 
-    attr_accessor :redis_url, :redis_pool, :retry_max, :retry_time,
-                  :workers, :queue_threads, :retry_threads
+    attr_accessor :redis_url, :redis_pool
 
     def initialize
-      DEFAULTS.each { |key, value| send("#{key}=", value) }
+      BASE_DEFAULTS.each { |key, value| send("#{key}=", value) }
     end
 
-    def retry_max_time
-      @retry_max_time ||= retry_max * retry_time
-    end
-
-    def worker_options
+    def redis
       {
-        worker_count: workers,
-        queue_threads: queue_threads,
-        retry_threads: retry_threads
+        size: redis_pool,
+        url: redis_url
       }
     end
   end

@@ -1,7 +1,0 @@
-#!/usr/bin/env ruby
-
-require 'activehook'
-require 'activehook/cli'
-
-cli = ActiveHook::CLI.new(ARGV)
-cli.start
