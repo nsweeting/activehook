@@ -10,7 +10,8 @@ module ActiveHook
         @req = Rack::Request.new(env)
 
         if validation_request? then response(Validation)
-        elsif creation_request? then response(Creation)
+        #Not enabling webhook creation yet.
+        #elsif creation_request? then response(Creation)
         else @app.call(@env)
         end
       end
@@ -25,25 +26,25 @@ module ActiveHook
 
       def response(klass)
         response =
-          if klass.new(@req.params).start then { code: 200, status: true }
+          if klass.new(@req).start then { code: 200, status: true }
           else { code: 400, status: false }
           end
         [response[:code], { "Content-Type" => "application/json" }, [{ status: response[:status] }.to_json]]
       end
     end
 
-    Validation = Struct.new(:params) do
+    Validation = Struct.new(:req) do
       def start
-        hook = { id: params['id'].to_i, key: params['key'] }
+        hook = { id: req.params['id'].to_i, key: req.params['key'] }
         ActiveHook::Validate.new(hook).perform
       rescue
         false
       end
     end
 
-    Creation = Struct.new(:params) do
+    Creation = Struct.new(:req) do
       def start
-        hook = { uri: params['uri'], payload: JSON.parse(params['payload']) }
+        hook = JSON.parse(req.body.read)
         ActiveHook::Hook.new(hook).perform
       rescue
         false

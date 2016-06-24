@@ -1,12 +1,12 @@
 # ActiveHook
 ---
 
-Fast and simple webhook microservice for Ruby. **Please consider it under development at the moment.**
+Fast and simple webhook delivery microservice for Ruby. **Please consider it under development at the moment.**
 
 ActiveHook provides a scalable solution to your applications webhook sending needs. Its Redis-backed, with support for forking and threading - letting it send an enormous amount of webhooks in short order. Basically a much more focused version of a job processor such as Sidekiq, DelayedJob, Resque, etc. It includes the following:
 
-- A server for the purpose of sending webhooks.
-- A mixin module for the purpose of recieving and validating webhooks.
+- A server for the purpose of sending webhooks. With support for retry attempts.
+- A client-side mixin module for the purpose of recieving and validating webhooks.
 - A piece of Rack middleware for the purpose of performing validation.
 
 ## Installation
@@ -161,7 +161,7 @@ In Rails, we would add the middleware like this:
 
 ```ruby
 # In config/application.rb
-config.middleware.use ActiveHook::App::Middleware
+config.middleware.use('ActiveHook::App::Middleware')
 ```
 
 Or with Rackup files:
