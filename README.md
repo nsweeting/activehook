@@ -155,7 +155,13 @@ end
 
 Sending webhooks is one thing - ensuring they are from who we want is another.
 
-ActiveHook includes a piece of Rack middleware for the purpose of validation. When a client attempts to validate a webhook, they are sending a message back to your server. The message includes the hooks ID as well as key. These are are then cross-referenced. If they match, we provide the AOK.
+ActiveHook includes a piece of Rack middleware for the purpose of validation. When a client attempts to validate a webhook, they are sending a message back to your server. The message includes the hooks ID as well as key. These are are then cross-referenced with the server records. If they match, we provide the AOK.
+
+We set the address that the middleware uses from our config file (App mode config described above):
+
+```ruby
+config.validation_path = '/hooks/validate'
+```
 
 In Rails, we would add the middleware like this:
 
