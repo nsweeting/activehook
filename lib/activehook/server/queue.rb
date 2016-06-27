@@ -36,7 +36,7 @@ module ActiveHook
     class HookRunner
       def initialize(json)
         @hook = Hook.new(JSON.parse(json))
-        @post = Send.new(uri: @hook.uri, payload: @hook.secure_payload)
+        @post = Send.new(hook: @hook)
         start
       end
 

@@ -7,8 +7,8 @@ module ActiveHook
 
   module Server
     class Send
-      attr_accessor :payload
-      attr_reader :response_time, :uri, :status, :response
+      attr_accessor :hook
+      attr_reader :response_time, :status, :response
 
       def initialize(options = {})
         options.each { |key, value| send("#{key}=", value) }
@@ -19,8 +19,8 @@ module ActiveHook
         log_status
       end
 
-      def uri=(uri)
-        @uri = URI.parse(uri)
+      def uri
+        @uri ||= URI.parse(@hook.uri)
       end
 
       def success?
@@ -32,7 +32,7 @@ module ActiveHook
       def post_hook
         http = Net::HTTP.new(uri.host, uri.port)
         measure_response_time do
-          @response = http.post(uri.path, payload, REQUEST_HEADERS)
+          @response = http.post(uri.path, @hook.final_payload, final_headers)
         end
         response_status(@response)
       rescue
@@ -64,6 +64,10 @@ module ActiveHook
         else
           ActiveHook.log.err(msg)
         end
+      end
+
+      def final_headers
+        { "X-Hook-Signature" => @hook.signature }.merge(REQUEST_HEADERS)
       end
     end
   end

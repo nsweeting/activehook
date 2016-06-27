@@ -7,8 +7,12 @@ module ActiveHook
 
       def start
         until @done
-          retries = retrieve_retries
-          update(retries) unless retries.empty?
+          ActiveHook.redis.with do |conn|
+            conn.watch('ah:retry') do
+              retries = retrieve_retries(conn)
+              update_retries(conn, retries)
+            end
+          end
           sleep 2
         end
       end
@@ -19,32 +23,20 @@ module ActiveHook
 
       private
 
-      def retrieve_retries
-        ActiveHook.redis.with do |conn|
-          conn.zrangebyscore('ah:retry', 0, Time.now.to_i)
-        end
+      def retrieve_retries(conn)
+        conn.zrangebyscore('ah:retry', 0, Time.now.to_i)
       end
 
-      def update(retries)
-        ActiveHook.redis.with do |conn|
-          conn.pipelined do
-            conn.zrem('ah:retry', retries)
-            conn.incrby('ah:total_retries', retries.count)
+      def update_retries(conn, retries)
+        if retries.any?
+          conn.multi do |multi|
+            multi.incrby('ah:total_retries', retries.count)
+            multi.zrem('ah:retry', retries)
+            multi.lpush('ah:queue', retries)
           end
+        else
+          conn.unwatch
         end
-        retries.each { |r| RetryRunner.new(r) }
-      end
-    end
-
-    class RetryRunner
-      def initialize(json)
-        @json = json
-        @hook = Hook.new(JSON.parse(@json))
-        start
-      end
-
-      def start
-        @hook.perform
       end
     end
   end

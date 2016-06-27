@@ -28,10 +28,11 @@ module ActiveHook
   class BaseConfig
     BASE_DEFAULTS = {
       redis_url: ENV['REDIS_URL'],
-      redis_pool: 5
+      redis_pool: 5,
+      signature_header: 'X-Webhook-Signature'
     }.freeze
 
-    attr_accessor :redis_url, :redis_pool
+    attr_accessor :redis_url, :redis_pool, :signature_header
 
     def initialize
       BASE_DEFAULTS.each { |key, value| send("#{key}=", value) }

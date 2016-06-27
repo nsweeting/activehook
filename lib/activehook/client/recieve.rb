@@ -8,15 +8,22 @@ module ActiveHook
         "User-Agent"   => "ActiveHook/#{ActiveHook::VERSION}"
       }.freeze
 
-      attr_accessor :hook_id, :hook_key
-      attr_reader :payload
+      attr_accessor :request, :token
 
-      def hook_valid?
-        @hook_valid ||= validate_hook
+      def initialize(options = {})
+        options.each { |key, value| send("#{key}=", value) }
       end
 
-      def payload=(payload)
-        @payload = JSON.parse(payload)
+      def signature_valid?
+        @signature_valid ||= validate_signature
+      end
+
+      def server_valid?
+        @server_valid ||= validate_server
+      end
+
+      def payload
+        parsed_body['payload']
       rescue
         nil
       end
@@ -28,11 +35,29 @@ module ActiveHook
 
       private
 
+      def parsed_body
+        @parsed_body ||= JSON.parse(request.body.read)
+      rescue
+        {}
+      end
+
+      def hook_id
+        parsed_body['hook_id']
+      end
+
+      def hook_key
+        parsed_body['hook_key']
+      end
+
       def hook_uri
         @hook_uri ||= URI.parse(self.class::VALIDATION_URI)
       end
 
-      def validate_hook
+      def hook_signature
+        @request.env["HTTP_#{parsed_body['hook_signature']}"]
+      end
+
+      def validate_server
         http = Net::HTTP.new(hook_uri.host, hook_uri.port)
         response = http.post(hook_uri.path, hook_json, REQUEST_HEADERS)
         response.code.to_i == 200 ? true : false
@@ -40,9 +65,16 @@ module ActiveHook
         false
       end
 
+      def validate_signature
+        signature = OpenSSL::HMAC.hexdigest(OpenSSL::Digest.new('sha1'), @token, payload)
+        Rack::Utils.secure_compare(signature, hook_signature)
+      rescue
+        false
+      end
+
       def hook_json
-        { id: @hook_id,
-          key: @hook_key }.to_json
+        { id: hook_id,
+          key: hook_key }.to_json
       end
     end
   end

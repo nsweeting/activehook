@@ -1,8 +1,6 @@
-require 'securerandom'
-
 module ActiveHook
   class Hook
-    attr_accessor :uri, :payload, :id, :key, :retry_max, :retry_time, :created_at
+    attr_accessor :token, :uri, :payload, :id, :key, :retry_max, :retry_time, :created_at
 
     def initialize(options = {})
       options = defaults.merge(options)
@@ -37,6 +35,7 @@ module ActiveHook
     def to_json
       { id: @id,
         key: @key,
+        token: @token,
         created_at: @created_at,
         retry_time: @retry_time,
         retry_max: @retry_max,
@@ -44,14 +43,16 @@ module ActiveHook
         payload: @payload }.to_json
     end
 
-    def secure_payload
+    def final_payload
       { hook_id: @id,
         hook_key: @key,
+        hook_time: @created_at,
+        hook_signature: ActiveHook.config.signature_header,
         payload: @payload }.to_json
     end
 
-    def valid?
-      HookValidator.new(id: @id, key: @key).server_valid?
+    def signature
+      OpenSSL::HMAC.hexdigest(OpenSSL::Digest.new('sha1'), @token, final_payload)
     end
 
     private
@@ -64,6 +65,7 @@ module ActiveHook
     end
 
     def validate!
+      raise Errors::Hook, 'Token must be a String.' unless @token.is_a?(String)
       raise Errors::Hook, 'Payload must be a Hash.' unless @payload.is_a?(Hash)
       raise Errors::Hook, 'URI is not a valid format.' unless @uri =~ /\A#{URI::regexp}\z/
       raise Errors::Hook, 'Created at must be an Integer.' unless @created_at.is_a?(Integer)

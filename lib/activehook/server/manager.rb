@@ -21,15 +21,14 @@ module ActiveHook
         validate!
         start_messages
         create_workers
-        sleep
+        Process.wait
       end
 
       # Shutsdown our Worker processes.
       #
       def shutdown
-        @forks.each { |w| Process.kill('SIGTERM', w[:pid].to_i) }
-        Process.kill('SIGTERM', @master)
-        exit
+        @forks.each { |w| Process.kill('SIGINT', w[:pid].to_i) }
+        Process.kill('SIGINT', @master)
       end
 
       private

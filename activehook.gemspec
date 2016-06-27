@@ -8,8 +8,8 @@ Gem::Specification.new do |spec|
   spec.version       = ActiveHook::VERSION
   spec.authors       = ["Nicholas Sweeting"]
   spec.email         = ["nsweeting@gmail.com"]
-  spec.summary       = "Fast and simple webhook microservice for Ruby."
-  spec.description   = "Fast and simple webhook microservice for Ruby."
+  spec.summary       = "Fast and simple webhook delivery microservice for Ruby."
+  spec.description   = "Fast and simple webhook delivery microservice for Ruby."
   spec.homepage      = "https://github.com/nsweeting/activehook"
   spec.license       = "MIT"
 
