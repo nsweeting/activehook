@@ -8,7 +8,7 @@ module ActiveHook
         "User-Agent"   => "ActiveHook/#{ActiveHook::VERSION}"
       }.freeze
 
-      attr_accessor :request, :token
+      attr_accessor :request
 
       def initialize(options = {})
         options.each { |key, value| send("#{key}=", value) }
@@ -29,7 +29,7 @@ module ActiveHook
       end
 
       def validated_payload
-        raise StandardError, 'Webhook is invalid.' unless hook_valid?
+        raise StandardError, 'Webhook is invalid.' unless signature_valid?
         @payload
       end
 
@@ -54,7 +54,7 @@ module ActiveHook
       end
 
       def hook_signature
-        @request.env["HTTP_#{parsed_body['hook_signature']}"]
+        @request.env['HTTP_X-Webhook-Signature']
       end
 
       def validate_server
@@ -66,7 +66,7 @@ module ActiveHook
       end
 
       def validate_signature
-        signature = OpenSSL::HMAC.hexdigest(OpenSSL::Digest.new('sha1'), @token, payload)
+        signature = OpenSSL::HMAC.hexdigest(OpenSSL::Digest.new('sha1'), self.class::VALIDATION_TOKEN, payload)
         Rack::Utils.secure_compare(signature, hook_signature)
       rescue
         false
@@ -83,5 +83,6 @@ module ActiveHook
     include ActiveHook::Client::Recieve
 
     VALIDATION_URI = (ActiveHook.config.validation_uri).freeze
+    VALIDATION_TOKEN = (ActiveHook.config.validation_token).freeze
   end
 end

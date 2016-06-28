@@ -7,7 +7,7 @@ ActiveHook provides a scalable solution to your applications webhook sending nee
 
 - A server for the purpose of sending webhooks. With support for retry attempts.
 - A client-side mixin module for the purpose of recieving and validating webhooks.
-- A piece of Rack middleware for the purpose of performing validation.
+- A piece of Rack middleware for providing server-side validation.
 
 ## Installation
 
@@ -29,39 +29,39 @@ Or install it yourself as:
 
 Before starting, ensure you have a functioning Redis server available.
 
-ActiveHook can be run in a few different ways.
+ActiveHook can be operated in a few different ways.
 
-#### Server Mode
+#### The Server
 
- In order to send webhooks, we operate ActiveHook in server mode. This will be run as a seperate service beyond your web application (Rails, Sinatra, etc). To start the server simply type the following in your console.
+ In order to send webhooks, we run the ActiveHook server. This is a seperate service beyond your web application (Rails, Sinatra, etc). To start the server simply type the following in your console.
 
     $ bundle exec activehook-server -c config/activehook.rb
 
-By providing a path to a configuration file, we can setup ActiveHook with plain old ruby. Below is a list of currently available server options:
+By providing a path to a configuration file, we can setup ActiveHook with plain old ruby. In a rails application, this should be placed in your config folder. Below is a list of currently available server options:
 
 ```ruby
 # ActiveHook server configuration
 ActiveHook.configure do |config|
-  #Your redis server url
+  # Your redis server url
   config.redis_url = ENV['REDIS_URL']
-  #The number of redis connections to provide
+  # The number of redis connections to provide
   config.redis_pool = 10
-  #The number of forked workers to create for the server
+  # The number of forked workers to create for the server
   config.workers = 2
-  #The number of queue threads to provide for each worker
+  # The number of queue threads to provide for each worker
   config.queue_threads = 2
-  #The number of retry threads to provide for each worker
+  # The number of retry threads to provide for each worker
   config.retry_threads = 1
 end
 ```
 
-#### App Mode
+#### Your Application
 
-In order to create webhooks, we operate ActiveHook in app mode. Like above, we need to provide information on Redis. We will also need to provide a path in our web application that can be used for validation. With Rails, we should place this configuration with our initializers.
+Before we can create webhooks within our application, we will need to do some setup. With Rails, we should place this configuration with your initializers. Below is a list of currently available application options:
 
 ```ruby
 #IMPORTANT!
-require 'activehook/app/base'
+require 'activehook/app'
 
 # ActiveHook app configuration
 ActiveHook.configure do |config|
@@ -69,41 +69,50 @@ ActiveHook.configure do |config|
   config.redis_url = ENV['REDIS_URL']
   #The number of redis connections to provide
   config.redis_pool = 5
-  #The route to our webhook validator
+  #The route to the webhook validator if you want to enable server-side validation
   config.validation_path = '/hooks/validate'
 end
+```
+
+To provide webhooks to your users, you will also need to allow them to specify a URI and token. In Rails, we can do this by creating a migration like below:
+
+```ruby
+add_column :users, :webhook_uri, :string
+add_column :users, :webhook_token, :string
 ```
 
 With our app setup, we can create webhooks for processing. From within our application, all we have to do is:
 
 ```ruby
-ActiveHook::Hook.new(uri: 'http://example.com/webhook', payload: { msg: 'My first webhook!' })
+ActiveHook::Hook.new(token: webhook_token, uri: webhook_uri, payload: { msg: 'My first webhook!' })
 ```
 
-That's it! We provide a valid string URI, as well hash payload. ActiveHooks server will then attempt to send the webhook. If the webhook fails to be delivered, it will be sent to the retry queue. Delivery will be reattempted at the specified intervals, and eventually dropped if all attempts fail.
+That's it! We provide a valid string token and URI, as well hash payload. ActiveHooks server will then attempt to send the webhook. If the webhook fails to be delivered, it will be sent to the retry queue. Delivery will be reattempted at the specified intervals, and eventually dropped if all attempts fail.
 
 The default setting for failed webhooks is 3 more attempts at an interval of 3600 seconds (1 hour). You can change these values by including them in your hook initialization.
 
 ```ruby
-ActiveHook::Hook.new(uri: 'http://example.com/webhook', payload: { msg: 'My first webhook!' }, retry_max: 3, retry_time: 3600)
+ActiveHook::Hook.new(token: webhook_token, uri: webhook_uri, payload: { msg: 'My first webhook!' }, retry_max: 3, retry_time: 3600)
 ```
 
-We will go over app webhook validation after the following section...
-
-#### Client Mode
+#### Recieving
 
 ActiveHook provides a class as well as mixin module for the purposes of recieving webhooks and performing validation on them. The class should be used for personal projects and testing, while the mixin module can be integrated with other application gems.
 
-Using the class is easy. We should first add use the following config:
+Using the class or mixin, we are able to perform both client-side and server-side validation.
+
+Using the class is easy. We should first add the following config:
 
 ```ruby
 #IMPORTANT!
-require 'activehook/client/base'
+require 'activehook/client'
 
 # ActiveHook client configuration
 ActiveHook.configure do |config|
-  #Your validation uri
+  # Your validation uri for server-side validation
   config.validation_uri = 'http://localhost:3000/hooks/validate'
+  # Your validation token for client-side validation
+  config.validation_token = ENV['WEBHOOK_TOKEN']
 end
 ```
 
@@ -113,29 +122,30 @@ If we were using Rails we could then do the following:
 class WebhooksController < ApplicationController
 
   def create
-    @webhook = ActiveHook::Recieve.new(webhook_params)
-    if @webhook.hook_valid?
+    @webhook = ActiveHook::Recieve.new(request: request)
+    if @webhook.signature_valid?
       #We can now do stuff with the Hash @webhook.payload
     end
   end
-
-  private
-
-  def webhook_params
-    params.require(:hook_id, :hook_key, :payload)
-  end
 end
+```
+
+The signature_valid? method will perform client-side validation. We can also perform server-side validation by doing the following:
+
+```ruby
+@webhook.server_valid?
 ```
 
 Using the mixin module for our own classes would go like this:
 
 ```ruby
-require 'activehook/client/base'
+require 'activehook/client'
 
 module MyApp
   class Webhook
     include ActiveHook::Client::Recieve
 
+    VALIDATION_TOKEN = ENV['WEBHOOK_TOKEN']
     #IMPORTANT! We will go over running the validation server next.
     VALIDATION_URI = 'http://myapp.com/hooks/validate'
   end
@@ -145,19 +155,19 @@ end
 This would allow us to perform the same validation actions as in our Rails example, except we could use:
 
 ```ruby
-@webhook = MyApp::Webhook.new(webhook_params)
-if @webhook.hook_valid?
+@webhook = MyApp::Webhook.new(request: request)
+if @webhook.signature_valid?
   #We can now do stuff with the Hash @webhook.payload
 end
 ```
 
-#### App Mode Validation
+#### Server Validation
 
-Sending webhooks is one thing - ensuring they are from who we want is another.
+Along with client-side validation, ActiveHook also allows you to setup server-side validation. This utilizes a piece of Rack middleware.
 
-ActiveHook includes a piece of Rack middleware for the purpose of validation. When a client attempts to validate a webhook, they are sending a message back to your server. The message includes the hooks ID as well as key. These are are then cross-referenced with the server records. If they match, we provide the AOK.
+When a client attempts to validate a webhook, they are sending a message back to your server. The message includes the hooks ID as well as key. These are are then cross-referenced with the server records. If they match, we provide the AOK.
 
-We set the address that the middleware uses from our config file (App mode config described above):
+We set the address that the middleware uses from our config file (application config described above):
 
 ```ruby
 config.validation_path = '/hooks/validate'
