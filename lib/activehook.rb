@@ -1,5 +1,4 @@
 require 'activehook/version'
-require 'byebug'
 
 module ActiveHook
   class << self
