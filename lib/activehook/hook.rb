@@ -1,19 +1,22 @@
 module ActiveHook
   class Hook
     attr_accessor :token, :uri, :payload, :id, :key, :retry_max, :retry_time, :created_at
+    attr_reader :errors
 
     def initialize(options = {})
       options = defaults.merge(options)
       options.each { |key, value| send("#{key}=", value) }
+      @errors = {}
     end
 
-    def perform
-      validate!
-      ActiveHook.redis.with do |conn|
-        @id = conn.incr('ah:total_queued')
-        conn.lpush('ah:queue', to_json)
-        conn.zadd('ah:validation', @id, @key)
-      end
+    def save
+      return false unless valid?
+      save_hook
+    end
+
+    def save!
+      raise Errors::Hook, 'Hook is invalid' unless valid?
+      save_hook
     end
 
     def retry?
@@ -55,7 +58,20 @@ module ActiveHook
       OpenSSL::HMAC.hexdigest(OpenSSL::Digest.new('sha1'), @token, final_payload)
     end
 
+    def valid?
+      validate!
+      @errors.empty?
+    end
+
     private
+
+    def save_hook
+      ActiveHook.redis.with do |conn|
+        @id = conn.incr('ah:total_queued')
+        conn.lpush('ah:queue', to_json)
+        conn.zadd('ah:validation', @id, @key)
+      end
+    end
 
     def defaults
       { key: SecureRandom.uuid,
@@ -65,12 +81,12 @@ module ActiveHook
     end
 
     def validate!
-      raise Errors::Hook, 'Token must be a String.' unless @token.is_a?(String)
-      raise Errors::Hook, 'Payload must be a Hash.' unless @payload.is_a?(Hash)
-      raise Errors::Hook, 'URI is not a valid format.' unless @uri =~ /\A#{URI::regexp}\z/
-      raise Errors::Hook, 'Created at must be an Integer.' unless @created_at.is_a?(Integer)
-      raise Errors::Hook, 'Retry time must be an Integer.' unless @retry_time.is_a?(Integer)
-      raise Errors::Hook, 'Retry max must be an Integer.' unless @retry_max.is_a?(Integer)
+      @errors.merge!(token: ['must be a string.']) unless @token.is_a?(String)
+      @errors.merge!(payload: ['must be a Hash']) unless @payload.is_a?(Hash)
+      @errors.merge!(uri: ['is not a valid format.']) unless @uri =~ /\A#{URI::regexp}\z/
+      @errors.merge!(created_at: ['must be an Integer.']) unless @created_at.is_a?(Integer)
+      @errors.merge!(retry_time: ['must be an Integer.']) unless @retry_time.is_a?(Integer)
+      @errors.merge!(retry_max: ['must be an Integer.']) unless @retry_max.is_a?(Integer)
     end
   end
 end

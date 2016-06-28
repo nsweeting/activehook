@@ -84,7 +84,13 @@ add_column :users, :webhook_token, :string
 With our app setup, we can create webhooks for processing. From within our application, all we have to do is:
 
 ```ruby
-ActiveHook::Hook.new(token: webhook_token, uri: webhook_uri, payload: { msg: 'My first webhook!' })
+hook = ActiveHook::Hook.new(token: webhook_token, uri: webhook_uri, payload: { msg: 'My first webhook!' })
+if hook.save # We can also do save!, which would raise an exception upon failure.
+  # Success.
+else
+  # Failed - access errors at hook.errors
+end
+
 ```
 
 That's it! We provide a valid string token and URI, as well hash payload. ActiveHooks server will then attempt to send the webhook. If the webhook fails to be delivered, it will be sent to the retry queue. Delivery will be reattempted at the specified intervals, and eventually dropped if all attempts fail.
