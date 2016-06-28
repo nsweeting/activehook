@@ -1,7 +1,7 @@
 module ActiveHook
   class Hook
-    attr_accessor :token, :uri, :payload, :id, :key, :retry_max, :retry_time, :created_at
-    attr_reader :errors
+    attr_accessor :token, :uri, :id, :key, :retry_max, :retry_time, :created_at
+    attr_reader :errors, :payload
 
     def initialize(options = {})
       options = defaults.merge(options)
@@ -17,6 +17,16 @@ module ActiveHook
     def save!
       raise Errors::Hook, 'Hook is invalid' unless valid?
       save_hook
+    end
+
+    def payload=(payload)
+      if payload.is_a?(String)
+        @payload = JSON.parse(payload)
+      else
+        @payload = payload
+      end
+    rescue JSON::ParserError
+      @payload = nil
     end
 
     def retry?
