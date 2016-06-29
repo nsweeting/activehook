@@ -56,6 +56,10 @@ module ActiveHook
         payload: @payload }.to_json
     end
 
+    def as_json(_options)
+      to_json
+    end
+
     def final_payload
       { hook_id: @id,
         hook_key: @key,
