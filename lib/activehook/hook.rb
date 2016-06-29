@@ -1,7 +1,5 @@
 module ActiveHook
   class Hook
-    alias :read_attribute_for_serialization :send
-
     attr_accessor :token, :uri, :id, :key, :retry_max, :retry_time, :created_at
     attr_reader :errors, :payload
 
@@ -73,10 +71,6 @@ module ActiveHook
     def valid?
       validate!
       @errors.empty?
-    end
-
-    def self.model_name
-      @_model_name ||= ActiveModel::Name.new(self)
     end
 
     private
