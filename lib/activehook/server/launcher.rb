@@ -1,3 +1,5 @@
+require 'optparse'
+
 module ActiveHook
   module Server
     # Handles the start of the ActiveHook server via command line

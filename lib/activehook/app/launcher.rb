@@ -1,3 +1,5 @@
+require 'optparse'
+
 module ActiveHook
   module App
     # Handles the start of the ActiveHook web via command line
